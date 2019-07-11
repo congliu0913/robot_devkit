@@ -18,8 +18,8 @@
 ################################################################################
 
 CURRENT_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
-ROBOT_SDK_ROOT_DIR=$(readlink -f "${CURRENT_DIR}/../")
-ROBOT_SDK_WS_DIR=${ROBOT_SDK_ROOT_DIR}/sdk_ws
+ROBOT_DEVKIT_ROOT_DIR=$(readlink -f "${CURRENT_DIR}/../")
+ROBOT_DEVKIT_WS_DIR=${ROBOT_DEVKIT_ROOT_DIR}/rdk_ws
 
 # Color definitions for foreground
 FG_NONE='\033[0m'
@@ -37,7 +37,7 @@ FG_BLUE='\033[0;34m'
 # FG_LIGHT_RED="\033[0;91m"
 # FG_LIGHT_GREEN="\033[0;92m"
 # FG_LIGHT_YELLOW="\033[0;93m"
-# FG_LIGHT_BLUE="\033[0;94m"
+FG_LIGHT_BLUE="\033[0;94m"
 # FG_LIGHT_MAGENTA='\033[0;95m'
 FG_LIGHT_CYAN='\033[1;96m'
 # FG_WHITE='\033[1;97m'
@@ -99,43 +99,59 @@ execute() {
 }
 
 ######################################
-# Get path of ROBOT_SDK scripts directory
+# Get path of ROBOT_DEVKIT scripts directory
 ######################################
 get_scripts_dir()
 {
-  echo "${ROBOT_SDK_ROOT_DIR}"/scripts
+  echo "${ROBOT_DEVKIT_ROOT_DIR}"/scripts
 }
 
 ######################################
-# Get path of the ROBOT_SDK root directory
+# Get path of ROBOT_DEVKIT config directory
+######################################
+get_config_dir()
+{
+  echo "${ROBOT_DEVKIT_ROOT_DIR}"/scripts/config
+}
+
+######################################
+# Get path of the ROBOT_DEVKIT root directory
 ######################################
 get_root_dir()
 {
-  echo "${ROBOT_SDK_ROOT_DIR}"
+  echo "${ROBOT_DEVKIT_ROOT_DIR}"
 }
 
 ######################################
-# Get path of the ROBOT_SDK workspace directory
+# Get path of the DEVKIT workspace directory
 ######################################
-get_sdk_ws_dir()
+get_rdk_ws_dir()
 {
-  echo "${ROBOT_SDK_WS_DIR}"
+  echo "${ROBOT_DEVKIT_WS_DIR}"
 }
 
 ######################################
-# Get path of the ROBOT_SDK products directory
+# Get path of the ROBOT_DEVKIT products directory
 ######################################
 get_products_dir()
 {
-  echo "${ROBOT_SDK_ROOT_DIR}"/products
+  echo "${ROBOT_DEVKIT_ROOT_DIR}"/products
+}
+
+#######################################
+# Get packages directory
+#######################################
+get_packages_dir()
+{
+  echo "${ROBOT_DEVKIT_ROOT_DIR}"/packages
 }
 
 ######################################
-# Get installation path for ROBOT_SDK ROS/ROS2 SDK
+# Get installation path for ROBOT_DEVKIT ROS/ROS2 RDK
 ######################################
 get_install_dir()
 {
-  echo "/opt/robot_sdk"
+  echo "/opt/robot_devkit"
 }
 
 unset CURRENT_DIR

@@ -23,6 +23,43 @@ set -e
 
 . "${CURRENT_DIR}"/product.sh
 
+######################################
+# get the package version information
+######################################
+get_package_version() {
+  echo "The packages version information list"
+
+  local package_dir
+  local package_size
+  local package_size_git
+  local package_size_src
+  local package_version
+  local package_name
+  local version_file
+
+  package_dir=$(get_rdk_ws_dir)
+  version_file=$(get_config_dir)/version_package.ini
+  echo -e "$(date)" > "$version_file"
+
+  cd "$package_dir" ||exit
+  read -r -a array <<< "$(find "$package_dir" -name ".git" |tr "\n" " ")"
+  for package in "${array[@]}"
+  do
+    package=${package%/.git*}
+    cd "$package" || exit
+    package_size=$(du -s |awk '{print $1}')
+    package_size_git=$(du -s .git |awk '{print $1}')
+    package_size_src=$((package_size-package_size_git))
+    package_version=$(git rev-parse HEAD)
+    package_name=${package##*/}
+    echo "[$package_name]" |tee -a "$version_file"
+    echo "size=$package_size_src kB" |tee -a "$version_file"
+    echo "version=$package_version" |tee -a "$version_file"
+    echo "" |tee -a "$version_file"
+  done
+  echo "Save the package version information to $version_file"
+}
+
 #######################################
 # Execute code syncing
 #######################################
@@ -58,49 +95,59 @@ sync_src_execute()
 #######################################
 # Sync the source code for groups
 # Arguments:
-#   group: core or device or modules or all
+#   pkg: core or device or modules or all
 #   sync_option: --force
 #######################################
-sync_src_group()
+sync_src_pkg()
 {
   info "\nSync code [$1] $2\n"
-  local group=${1}
-  local group_ws=${1}_ws
+  local pkg=${1}
+  local pkg_ws=${pkg}_ws
   local sync_option=${2}
-
-  # Install necessary tools before code sync
-  local system_setup_exec
-  system_setup_exec=$(get_current_product_dir)/$group/scripts/system_setup.sh
-  if [[ -f "${system_setup_exec}" ]] ; then
-    info "\nSystem Setup before code sync: ${system_setup_exec}\n"
-    execute "${system_setup_exec}"
-  fi
 
   # local repo and src directory
   local repo_dir
   local src_dir
 
-  repo_dir=$(get_current_product_dir)/$group/repos
-  src_dir=$(get_current_sdk_ws)/$group_ws/src
+  repo_dir=$(get_packages_dir)/$pkg/repos
+  src_dir=$(get_rdk_ws_dir)/$pkg_ws/src
 
   # sync ros2 packages
   sync_src_execute "${repo_dir}" "${src_dir}" "${sync_option}"
 
-  ok "\nSuccessful sync-ed source to ./sdk_ws/$group_ws/src\n"
+  ok "\nSuccessful sync-ed source to ../rdk_ws/$pkg_ws/src\n"
 }
 
 #######################################
-# Sync the source code for all repos files under repos folder including ROS2.
-# Arguments:
-#   sync_option: --force
+# delete the unselected package
 #######################################
-sync_src_all()
+del_sync_src_pkg()
 {
-  info "\nSync code [all] $2\n"
-  sync_option=$1
-  sync_src_group core "${sync_option}"
-  sync_src_group device "${sync_option}"
-  sync_src_group modules "${sync_option}"
+  local pkg=$1
+  local src_dir
+  local pkg_ws=${pkg}_ws
+  local flag
+
+  src_dir=$(get_rdk_ws_dir)/$pkg_ws
+
+  if [[ -d "$src_dir" ]];then
+    echo -e -n "\n${FG_BLUE}Are you sure to delete the [$pkg] package:[Y/n]?${FG_NONE}"
+    read -r flag
+    shopt -s nocasematch
+    case $flag in
+      n|no)
+        echo "skip package [$pkg] :$src_dir"
+        ;;
+      y|yes)
+        echo "delete package [$pkg] :$src_dir"
+        rm -rf "$src_dir"
+        ;;
+      *)
+        echo "default delete [$pkg] :$src_dir"
+        rm -rf "$src_dir"
+        ;;
+    esac
+  fi
 }
 
 #######################################
@@ -111,38 +158,26 @@ sync_src_all()
 #######################################
 sync_src()
 {
-  local group=${1}
-
-  if [[ "${group}" != "core" ]] && [[ "${group}" != "device" ]] && [[ "${group}" != "modules" ]] && [[ "${group}" != "all" ]]; then
-    error "Please select sync group [core|device|modules|all]"
-    exit 1
-  fi
-
-  shift
-  local sync_option=$*
-
-  if [[ -z "$(get_current_product)" ]]; then
-    error "Please select product via command \"robot_sdk.sh product\"."
-    exit 1
-  fi
+  local sync_option=${1}
 
   if [[ "${sync_option}" ]] && [[ "${sync_option}" != "--force" ]]; then
-    error "./robot_sdk.sh: error: unrecognized arguments:'${sync_option}'"
+    error "./rdk.sh: error: unrecognized arguments:'${sync_option}'"
     exit 1
   fi
 
-  case $group in
-    core | device | modules)
-      sync_src_group "$group" "${sync_option}"
-      ;;
-    all)
-      sync_src_all "${sync_option}"
-      ;;
-    *)
-      error "\nThe group should be \"core\" or \"device\" or \"modules\" or \"all\" .\n"
-      exit 1
-      ;;
-  esac
+  read -r -a del_pkgs <<< "$(get_packages_delete_list)"
+  for del_pkg in "${del_pkgs[@]}"
+  do
+    del_sync_src_pkg "$del_pkg"
+  done
+
+  read -r -a array <<< "$(get_packages_list)"
+  for pkg in "${array[@]}"
+  do
+    sync_src_pkg "$pkg" "${sync_option}"
+  done
+
+  get_package_version
 }
 
 unset CURRENT_DIR

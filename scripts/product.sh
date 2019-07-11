@@ -35,21 +35,21 @@ get_current_product()
 }
 
 #######################################
-# Get product list
+# Get package list
 #######################################
-get_products()
+get_packages()
 {
-  local -a products=()
-  local product
-  for i in $(get_products_dir)/*
+  local -a packages=()
+  local package
+  for i in $(get_packages_dir)/*
   do
-    product=$(basename "$i")
-    if [[ "$product" =~ "current" ]]; then
-      continue
+    package=$(basename "$i")
+    # common is always required and needn't configure, skip here
+    if [[ $package != "common" ]]; then
+      packages=( "${packages[@]}  $package")
     fi
-    products=( "${products[@]} $product" )
   done
-  echo "${products[@]}"
+  echo "${packages[@]}"
 }
 
 #######################################
@@ -88,90 +88,92 @@ get_current_product_dir()
 }
 
 #######################################
-# Get sdk workspace for current product
-#######################################
-get_current_sdk_ws()
-{
-  if [[ -d "$(get_products_dir)/current" ]]
-  then
-    get_sdk_ws_dir
-  else
-    error "No product has been selected"
-    exit 1
-  fi
-}
-
-
-#######################################
 # Get the dependence directory path for current product
 #######################################
 get_current_product_deps_dir()
 {
-  if [[ -d "$(get_products_dir)/current" ]]
-  then
-    echo "$(get_sdk_ws_dir)/third_party"
-  else
-    error "No product has been selected"
-    exit 1
-  fi
+  echo "$(get_rdk_ws_dir)/third_party"
 }
 
-
 #######################################
-# Select a product for working on
+# Get package delete list
 #######################################
-select_product()
+get_packages_delete_list()
 {
-  if [[ -n "$1" ]]; then
-    set_current_product "$1"
-    exit
-  fi
-
-  local index=0
-  IFS=', ' read -r -a array <<< "$(get_products)"
-
-  info "Select new product:"
-  for p in "${array[@]}"
-  do
-    if [[ "$(get_current_product)" == "$p" ]]
-    then
-      echo " *[$((index++))]: $p"
-    else
-      echo "  [$((index++))]: $p"
-    fi
-  done
-
-  if [[ -n "$(get_current_product)" ]]
-  then
-    info "Input selection (current=$(get_current_product)):"
+  local package_file
+  package_file="$(get_config_dir)/package.cfg"
+  if [[ -s "$package_file" ]]; then
+    awk 'BEGIN { FS="=" } $2 == "false" {print $1}' "$package_file" |tr "\n" " "
   else
-    info "Input selection:"
-  fi
-
-  read -rn 1 input_selection
-  echo ""
-
-  # check whether select or not
-  if [[ -z "$input_selection" ]]; then
-    ok "Selection not changed.\n"
+    echo "Profile does not exist!"
     exit 1
   fi
 
-  # check whether input is number
-  re='^[0-9]+$'
-  if ! [[ $input_selection =~ $re ]] ; then
-    error "Invalid input"
+}
+
+#######################################
+# Get package list
+#######################################
+get_packages_list()
+{
+  local package_file
+  package_file="$(get_config_dir)/package.cfg"
+  if [[ -s "$package_file" ]]; then
+    awk 'BEGIN { FS="=" } $2 == "true" {print $1}' "$package_file" |tr "\n" " "
+  else
+    echo "Profile does not exist!"
     exit 1
   fi
 
-  # check whether input number is in valid range
-  if (( input_selection > $((index - 1)) )); then
-    error "Invalid selection"
-    exit 1
-  fi
+}
 
-  # select product according to input
-  set_current_product "${array[$input_selection]}"
+#######################################
+# Select a package for working on
+#######################################
+config_package()
+{
+  local flag
+  local silent=$1
+  local silent_file=$2
+  config_file="$(get_config_dir)/package.cfg"
+  config_file_tmp="$(get_config_dir)/package.tmp"
+  IFS=', ' read -r -a array <<< "$(get_packages)"
+
+  if [[ "$silent" =~ "--silent" && -s "$silent_file" ]];then
+    read -r -a package <<< $(awk 'BEGIN { FS="=" } $2 == "true" {print $1}' "$silent_file" |tr "\n" " ")
+    for p in "${package[@]}"
+    do
+      echo "$p=true" >> "$config_file_tmp"
+    done
+  elif [[ "$silent" =~ "--default" ]];then
+    read -r -a package <<< "$(get_packages_list)"
+  echo -e "${FG_BLUE}Save the configuration to ${FG_NONE}${FG_YELLOW}$(get_config_dir)/package.cfg${FG_NONE}"
+    echo -e "${FG_BLUE}Will be install${FG_NONE} ${FG_YELLOW}$(get_packages_list)${FG_NONE}"
+    exit 0
+  else
+    shopt -s nocasematch
+    echo "# packages=flag[true|false]" > "$config_file_tmp"
+    echo -e "${FG_BLUE}Please select you install package[Y/n]?${FG_NONE}"
+    for p in "${array[@]}"
+    do
+      echo -e -n "${FG_LIGHT_BLUE}[$p]${FG_NONE}:${FG_RED}"
+      read -r flag
+      echo -e -n "${FG_NONE}"
+      case $flag in
+        n|no)
+          echo "$p=false" >> "$config_file_tmp"
+          ;;
+        y|yes|*)
+          echo "$p=true" >> "$config_file_tmp"
+          #echo -e "${FG_BLUE} $p decided to install ${FG_NONE}"
+          ;;
+      esac
+    done
+  fi
+  mv "$config_file_tmp" "$config_file"
+  echo -e "${FG_BLUE}Save the configuration to${FG_NONE}${FG_YELLOW} $(get_config_dir)/package.cfg${FG_NONE}"
+  echo -e "${FG_BLUE}Will be install ${FG_NONE}${FG_YELLOW}$(get_packages_list)${FG_NONE}"
+
 }
 
 unset CURRENT_DIR

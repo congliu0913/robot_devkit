@@ -1,0 +1,99 @@
+#!/bin/bash
+
+# Reference: https://docs.opencv.org/3.4.2/d7/d9f/tutorial_linux_install.html
+
+DEFAULT_INSTALL=true
+BINARY_INSTALL=false
+
+install_binary()
+{
+  echo "Install opencv..."
+
+  # TODO: only installed 3.2, not available for 3.4
+  sudo apt-get install libopencv-dev python-opencv
+}
+
+install_deps()
+{
+
+  # compiler
+  sudo apt-get install -y build-essential
+
+  # required
+  sudo apt-get install -y cmake git libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev
+
+  # optional
+  sudo apt-get install -y python-dev python-numpy libtbb2 libtbb-dev libjpeg-dev libpng-dev libtiff-dev libdc1394-22-dev
+}
+
+#
+# Build opencv
+#
+build_from_src()
+{
+  local TARGET_DIR=$1
+  cd $TARGET_DIR
+
+  echo "Build opencv ..."
+
+  if [[ ! -d opencv ]]
+  then
+    git clone --depth 1 https://github.com/opencv/opencv.git -b 3.4.2
+  fi
+  if [[ ! -d opencv_contrib ]]
+  then
+    git clone --depth 1 https://github.com/opencv/opencv_contrib.git -b 3.4.2
+  fi
+
+  cd opencv
+
+  # TODO: pre-download ippicv, fix "Download failed: 28; Timeout was reached"
+  # Use clone instead of wget to increase download speed
+  if [[ ! -d .cache/ippicv_download ]]
+  then
+    git clone --depth 1 https://github.com/opencv/opencv_3rdparty -b ippicv/master_20180518 .cache/ippicv_download
+  fi
+  mkdir -p .cache/ippicv
+  cp -rvf .cache/ippicv_download/ippicv/ippicv_2017u3_lnx_intel64_general_20180518.tgz .cache/ippicv/b7cc351267db2d34b9efa1cd22ff0572-ippicv_2017u3_lnx_intel64_general_20180518.tgz
+  
+  # TODO: pre-download data model, fix "Download failed: 28; Timeout was reached"
+  if [[ ! -d .cache/data_download ]]
+  then
+    git clone --depth 1 https://github.com/opencv/opencv_3rdparty -b contrib_face_alignment_20170818 .cache/data_download
+  fi
+  mkdir -p .cache/data
+  cp -rvf .cache/data_download/face_landmark_model.dat .cache/data/7505c44ca4eb54b4ab1e4777cb96ac05-face_landmark_model.dat
+
+  mkdir -p build
+  cd build
+  cmake -DOPENCV_EXTRA_MODULES_PATH="${TARGET_DIR}"/opencv_contrib/modules -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local -DBUILD_opencv_cnn_3dobj=OFF ..
+  make -j8
+  sudo make install
+  sudo ldconfig
+}
+
+
+#
+# Main entry to build deps
+#
+main()
+{
+  if [[ "$DEFAULT_INSTALL" != "true" ]]; then
+    echo "Default not install, skip"
+    exit
+  fi
+
+  if [[ "$BINARY_INSTALL" == "true" ]]; then
+    install_binary
+  else
+    TARGET_DIR=${1}
+    if [ ! -d "${TARGET_DIR}" ]; then
+      mkdir -p "${TARGET_DIR}"
+      echo "No such directory, create \"${TARGET_DIR}\""
+    fi
+    install_deps
+    build_from_src "${TARGET_DIR}"
+  fi
+}
+
+main "$@"
