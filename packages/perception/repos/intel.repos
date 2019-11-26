@@ -15,6 +15,10 @@ repositories:
     type: git
     url: https://github.com/intel/ros2_grasp_library.git
     version: 0.5.0
+  intel/ros2_object_msgs:
+    type: git
+    url: https://github.com/intel/ros2_object_msgs.git
+    version: master
   intel/ros2_ur_description:
     type: git
     url: https://github.com/RoboticsYY/ros2_ur_description.git

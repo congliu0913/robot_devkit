@@ -84,7 +84,7 @@ print_pkg_version()
   print_packages_version ${packages[@]}
 
   # ros2_navigation2
-  ros2_navigation2_version=$(dpkg -l |grep ros-dashing-navigation2|awk '{print $3}')
+  ros2_navigation2_version=$(dpkg -l |grep ros-eloquent-navigation2|awk '{print $3}')
   echo "    ros2_navigation2: $ros2_navigation2_version"
 
 }
@@ -109,7 +109,7 @@ print_thirdparty_version()
 
   echo "third_party:"
   # ros2-core
-  ros2_version=$(dpkg -l |grep ros-dashing-desktop|awk '{print $3}')
+  ros2_version=$(dpkg -l |grep ros-eloquent-desktop|awk '{print $3}')
   echo "    ros2-core: $ros2_version"
 
   # librealsense

@@ -45,4 +45,4 @@ sudo apt-get install -y \
   liblz4-1 \
   liblz4-dev \
   python3-scipy \
-  ros-dashing-eigen3-cmake-module
+  ros-eloquent-eigen3-cmake-module

@@ -31,15 +31,15 @@ install_intel_deps_binary()
 
   # Install pcl_conversions
   echo "Install pcl_conversions"
-  sudo apt-get install -y ros-dashing-pcl-conversions
+  sudo apt-get install -y ros-eloquent-pcl-conversions
 
   # Install cv-bridge
   echo "Install cv-bridge"
-  sudo apt-get install -y ros-dashing-cv-bridge
+  sudo apt-get install -y ros-eloquent-cv-bridge
 
   # Install object_msgs
-  echo "Install object_msgs"
-  sudo apt-get install -y ros-dashing-object-msgs
+  #echo "Install object_msgs"
+  #sudo apt-get install -y ros-dashing-object-msgs
 
 }
 
